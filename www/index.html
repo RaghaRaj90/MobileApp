@@ -1,0 +1,109 @@
+﻿<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+		<link rel="stylesheet" type="text/css" href="Content/bootstrap.css">
+   </head>
+    <body onload="checkPreAuth()">
+    <br/>
+    <div class="container body-content" style="font-family: Arial;">
+			     <header>
+
+			       <img src="img/logo.png" style="width:60%;height:9.30%"/>
+
+					<br/><br/>
+				 </header>
+
+				 <br/>
+
+           <h2>Welcome to AGGORA Mobile</h2><br/>
+           <h4><img src = "img/User.png" style ="width:30px; height:30px"/>  Please enter your log in details:</h4>
+
+           <br/>
+
+		  <div class="logindiv">
+			<input type ="text" style="height:50px;width:95%"id = "usernameBox" style ="form-control" placeholder="Username"/><br/>
+			<input type ="password" style="height:50px;width:95%" id = "PasswordBox" style ="form-control" placeholder="Password"/>
+     	    <br/><br/>
+
+		    <input type="submit" value="Submit" style="height:40px;width:95%"onclick ="Login()">
+		  </div>
+
+
+         </div>
+        <script type="text/javascript" src="cordova.js"></script>
+        <script type="text/javascript" src="js/index.js"></script>
+        <script type="text/javascript" src="js/SyncDB.js"></script>
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script>
+			function onDeviceReady(){
+				document.addEventListener("backbutton", onBackKeyDown, false);
+			}
+			function onBackKeyDown(){
+				navigator.app.exitApp();
+			}
+			document.addEventListener("deviceready", onDeviceReady, false);
+	    </script>
+        <script>
+
+		function checkPreAuth(){ // Check if the user name and password is stored in the local
+		    startup();
+			if(localStorage.getItem("username")!= null && localStorage.getItem("password")!= null)
+			{
+			    if (localStorage.getItem("EngineerName") == "Matt Wheeler") {
+			        window.location.href = 'Navigation_Admin.html'
+			    }
+			    else {
+			        if (localStorage.getItem("EngineerName") != null && localStorage.getItem("LastCheckinDate") != null && localStorage.getItem("LastCheckinTime") != null) // check if the user had checked in
+			            window.location.href = 'TimeSheet.html';
+			        else
+			            window.location.href = 'Navigation.html';
+
+			    }
+			    
+			}
+		}
+		function Login(){ // On login check user name and password with the value stored in the Remote DB
+		var username= document.getElementById("usernameBox").value;
+		var password = document.getElementById("PasswordBox").value;
+		 $.ajax({
+			type: "POST",
+			url: "http://10.0.1.39/EngTimesheetApp/api/account?username=" + username + "&password=" + password,
+			dataType: "json",
+			success: function(data) {
+			    if (data != "Fail" && data != "Error") {
+			        window.localStorage.setItem("username", username);
+			        window.localStorage.setItem("password", password);
+			        window.localStorage.setItem("EngineerName", data);
+			        startup();
+			        if (localStorage.getItem("LastCheckinDate") != null) {
+			            if (localStorage.getItem("EngineerName") == "Matt Wheeler") {
+			                window.location.href = 'TimeSheet_Admin.html'
+			            }
+			            else
+			                window.location.href = 'TimeSheet.html';
+			        }
+			        else {
+			            if (localStorage.getItem("EngineerName") == "Matt Wheeler") {
+			                window.location.href = 'Navigation_Admin.html'
+			            }
+			            else
+			                window.location.href = 'Navigation.html';
+
+			        }
+			    }
+			    else {
+			        alert('Login failed!');
+			        document.getElementById("PasswordBox").value = '';
+			    }
+			},
+			error: function(e) {
+			alert('There is an error: '+ e +' Please check your internet connection.');
+
+			}
+		 });
+		}
+		</script>
+    </body>
+</html>

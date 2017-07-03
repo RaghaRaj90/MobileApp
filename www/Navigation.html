@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Checkin</title>
+    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no;" />
+    <script type="text/javascript" charset="utf-8" src="cordova.js"></script>
+    <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+    <script src="js/ocrad.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="Content/bootstrap.css">
+    <script type="text/javascript" src="js/SyncDB.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/index.js"></script>
+    <script>
+
+        function Logout() {
+            navigator.notification.confirm(
+               "Are you sure you want to logout?",
+                callBackFunction, // Specify a function to be called
+                'Logout',
+                ["Cancel", "Ok"]
+        );
+        }
+        function callBackFunction(b) {
+            if (b != 1) {
+                window.localStorage.removeItem("username");
+                window.localStorage.removeItem("password");
+                window.location.href = 'index.html';
+            }
+        }
+    </script>
+    <script>
+        function SyncData() {
+            var networkState = navigator.connection.type;
+            var states = {};
+            states[Connection.UNKNOWN] = 'Unknown connection';
+            states[Connection.ETHERNET] = 'Ethernet connection';
+            states[Connection.WIFI] = 'WiFi connection';
+            states[Connection.CELL_2G] = 'Cell 2G connection';
+            states[Connection.CELL_3G] = 'Cell 3G connection';
+            states[Connection.CELL_4G] = 'Cell 4G connection';
+            states[Connection.CELL] = 'Cell generic connection';
+            states[Connection.NONE] = 'No network connection';
+            //alert('Connection type: ' + states[networkState]);
+            if (states[networkState] != "No network connection" && states[networkState] != "Unknown connection") {
+                GetExistingData();
+                //alert("Sync Done...");
+                navigator.notification.alert('Sync Done...', {}, 'Sync', 'Ok');
+            }
+            else {
+                //alert("You need a data connection to perform sync");
+                navigator.notification.alert('You need a data connection to perform sync', {}, 'Sync Fail', 'Ok');
+            }
+        }
+    </script>
+    <script>
+        function onLoad() {
+            startup();
+            populateList(document.getElementById("hlist"), 0, 24);
+            var checkindate = GetTodayDate();
+            var Datadiv = document.getElementById("date");
+            Datadiv.innerHTML = "Please checkin for:" + checkindate
+            return;
+        }
+        function populateList(aList, aStartHour, aEndHour) { // Populate the Time Dropdown
+            var itemIndex = 0;
+            // firstly empty the list if it's got anthing in it.
+            while (aList.options.length > 0) {
+                aList.options.remove(0);
+            }
+            // now add the new items;
+            for (var h = aStartHour; (h < aEndHour) ; ++h) {
+                var hs = ((h < 10) ? "0" : "") + h;
+                // do the fifteen minute thing
+                for (var m = 0; (m < 60) ; m += 15) {
+                    var opt = document.createElement("OPTION");
+                    var ms = ((m < 10) ? "0" : "") + m;
+                    aList.options.add(opt);
+                    opt.value = "time" + itemIndex;
+                    opt.innerText = hs + ":" + ms;
+                    ++itemIndex;
+                }
+            }
+            return;
+        }
+
+    </script>
+
+
+
+</head>
+<body onload="onLoad();">
+    <br />
+    <div class="container body-content" style="font-family: Arial;">
+        <header>
+            <img src="img/logo.png" style="width:60%;height:9.30%" />
+            <br />
+            <br />
+        </header>
+
+        <div>
+            <h3> Welcome to the AGGORA timesheet app &ndash; a handy way to manage your timesheet on the go! </h3>
+            <br />
+        </div>
+        <div id="date">
+
+        </div> <br/>
+        <div class="logindiv">
+            <button onclick="makevisible()"><input type="image" src="img/Clock2.png" /></button> <br/><br/>
+            <select id="hlist" style="display:none; width:22%" onchange="CreateEvent()"></select>
+        </div>
+    </div>
+    <div id="footer">
+
+        <a href="" class="footerelem"><img src="img/sign-sync-icon.png" /></a>
+        <a href="javascript:window.location.href = 'About.html'" class="footerelem"><img src="img/FAQ-icon.png" /></a>
+        <a class="footerelem" href="tel://+44 0845 1177 999"><img src="img/04-Call-icon.png" /></a>
+        <a class="footerelem" href="javascript:Logout()"><img src="img/Lock-2-icon.png" /></a>
+
+    </div>
+
+    <script>
+        function makevisible() {
+            var checkin = document.getElementById("checkin");
+            var DropDown = document.getElementById("hlist");
+            DropDown.style.visibility = "visible";
+            DropDown.style.display = "block";
+            return;
+        }
+    </script>
+    <script>
+        function GetTodayDate() { // get today's date in yyyy-mm-dd format
+            var today = new Date();
+            var dd = today.getDate()-1;
+            var mm = today.getMonth() + 1; //January is 0!
+            var yyyy = today.getFullYear();
+
+            if (dd < 10) {
+                dd = "0" + dd;
+
+            }
+
+            if (mm < 10) {
+                mm = "0" + mm;
+
+            }
+            var todaydate = yyyy + "-" + mm + "-" + dd;
+            return todaydate;
+        }
+        function CreateEvent() {  // Create the check in event for today
+            //  navigator.notification.confirm(
+            //       "Are you Oncall today?",
+            //        callBackFunction, // Specify a function to be called
+            //        'Oncall',
+            //        ["No", "Yes"]
+            //);
+            var CurrentDate = GetTodayDate();
+            var CurrentDateTime = CurrentDate + "T00:00:00";
+            var EngineerName = localStorage.getItem("EngineerName");
+            var StartTime = document.getElementById("hlist");
+            var StartTimeValue = StartTime.options[StartTime.selectedIndex].text;
+            var EndTime = GetCheckinEndTime(StartTimeValue);
+            var StartTimeValue = CurrentDate + "T" + StartTimeValue + ":00";
+            var EndTimeValue = CurrentDate + "T" + EndTime + ":00";
+            AddEvent(EngineerName, CurrentDateTime, "START WORK", StartTimeValue, EndTimeValue, '', '');
+            window.localStorage.setItem("LastCheckinDate", CurrentDateTime);
+            window.localStorage.setItem("LastCheckinTime", EndTimeValue);
+            //GetJobDetails(EngineerName, CurrentDateTime);
+            window.location.href = 'TimeSheet.html';
+        }
+
+        function GetCheckinEndTime(startTimeSelected) { // Get the added 15 minutes for Check in end time
+            var hourValue = startTimeSelected.toString().substring(0, 2);
+            var minuteValue = startTimeSelected.toString().substring(3, 5);
+            switch (minuteValue) {
+                case "00": minuteValue = "15";
+                    break;
+                case "15": minuteValue = "30";
+                    break;
+                case "30": minuteValue = "45";
+                    break;
+                case "45": minuteValue = "00";
+                    hourValue = parseInt(hourValue) + 1;
+                    if (hourValue < 10)
+                        hourValue = "0" + hourValue;
+                    break;
+            }
+
+            return hourValue + ":" + minuteValue;
+        }
+
+    </script>
+
+</body>
+</html>
